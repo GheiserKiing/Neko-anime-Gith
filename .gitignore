@@ -1,0 +1,35 @@
+# File: .gitignore
+
+# Dependencias de Node (tanto raíz como subcarpetas)
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Entorno de backend (credenciales)
+backend/.env
+backend/.env.*.local
+
+# Entorno de frontend
+frontend/.env
+frontend/.env.development
+frontend/.env.local
+frontend/.env.*.local
+
+# Ignorar imágenes subidas en backend
+backend/uploads/
+
+# Carpetas de compilación del frontend
+frontend/build/
+frontend/dist/
+
+# Archivos de logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Configuraciones de VS Code
+.vscode/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
