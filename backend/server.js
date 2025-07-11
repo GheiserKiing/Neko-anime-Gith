@@ -34,7 +34,6 @@ const db     = new sqlite3.Database(dbFile, err => {
     process.exit(1);
   }
   console.log("✅ Conectado a products.db");
-
   db.serialize(() => {
     // Tabla suppliers
     db.run(`
@@ -47,7 +46,7 @@ const db     = new sqlite3.Database(dbFile, err => {
         adminUrl     TEXT    DEFAULT ''
       );
     `);
-    // Asegurar columnas adicionales en suppliers
+    // Asegurar columnas adicionales
     db.all("PRAGMA table_info(suppliers);", (_, cols) => {
       const names = cols.map(c => c.name);
       if (!names.includes("callbackUrl")) {
@@ -59,7 +58,6 @@ const db     = new sqlite3.Database(dbFile, err => {
         db.run("ALTER TABLE suppliers ADD COLUMN adminUrl TEXT;");
       }
     });
-
     // Tabla categories
     db.run(`
       CREATE TABLE IF NOT EXISTS categories (
@@ -67,7 +65,6 @@ const db     = new sqlite3.Database(dbFile, err => {
         name TEXT    UNIQUE NOT NULL
       );
     `);
-
     // Tabla subcategories
     db.run(`
       CREATE TABLE IF NOT EXISTS subcategories (
@@ -91,16 +88,20 @@ if (!fs.existsSync(uploadDir)) {
 
 // Middlewares
 app.use(express.json());
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:3000" }));
+
+// CORS dinámico: permite cualquier origen (útil para previews y producción)
+app.use(cors({
+  origin: (origin, callback) => {
+    // Sin origin (curl/Postman) también permitimos
+    if (!origin) return callback(null, true);
+    // Permitir todos los orígenes
+    return callback(null, true);
+  },
+  credentials: true
+}));
+
 app.use(
   "/uploads",
-  (req, res, next) => {
-    res.setHeader(
-      "Access-Control-Allow-Origin",
-      process.env.CLIENT_ORIGIN || "http://localhost:3000"
-    );
-    next();
-  },
   express.static(uploadDir)
 );
 
