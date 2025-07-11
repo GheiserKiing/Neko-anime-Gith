@@ -1,4 +1,4 @@
-// File: NekoShop/NekoShop/backend/server.js
+// File: backend/server.js
 
 require("dotenv").config();
 const express   = require("express");
@@ -47,7 +47,7 @@ const db     = new sqlite3.Database(dbFile, err => {
         adminUrl     TEXT    DEFAULT ''
       );
     `);
-    // Asegura columnas callbackUrl/adminUrl
+    // Asegurar columnas adicionales en suppliers
     db.all("PRAGMA table_info(suppliers);", (_, cols) => {
       const names = cols.map(c => c.name);
       if (!names.includes("callbackUrl")) {
@@ -59,13 +59,35 @@ const db     = new sqlite3.Database(dbFile, err => {
         db.run("ALTER TABLE suppliers ADD COLUMN adminUrl TEXT;");
       }
     });
-    // Otras migraciones...
+
+    // Tabla categories
+    db.run(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id   INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT    UNIQUE NOT NULL
+      );
+    `);
+
+    // Tabla subcategories
+    db.run(`
+      CREATE TABLE IF NOT EXISTS subcategories (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_id INTEGER NOT NULL,
+        name        TEXT    NOT NULL,
+        UNIQUE(category_id, name),
+        FOREIGN KEY(category_id)
+          REFERENCES categories(id)
+          ON DELETE CASCADE
+      );
+    `);
   });
 });
 
 // Asegurar carpeta uploads
 const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Middlewares
 app.use(express.json());
@@ -73,7 +95,10 @@ app.use(cors({ origin: process.env.CLIENT_ORIGIN || "http://localhost:3000" }));
 app.use(
   "/uploads",
   (req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", process.env.CLIENT_ORIGIN || "http://localhost:3000");
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      process.env.CLIENT_ORIGIN || "http://localhost:3000"
+    );
     next();
   },
   express.static(uploadDir)
@@ -82,10 +107,7 @@ app.use(
 // Ruta de salud
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
-// OAuth proveedores (AliExpress)
-// Disponible en:
-//   GET  /api/suppliers/:supplierId/auth
-//   GET  /api/suppliers/:supplierId/auth/callback
+// OAuth proveedores
 app.use("/api/suppliers", suppliersAuthRouter);
 
 // Montar routers de API
